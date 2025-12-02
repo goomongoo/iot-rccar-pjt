@@ -67,8 +67,8 @@
 
 | STM32 | Raspberry Pi |
 |-------|--------------|
-| PA2 (TX) | GPIO 15 (RX) |
-| PA3 (RX) | GPIO 14 (TX) |
+| PA9 (TX) | GPIO 15 (RX) |
+| PA10 (RX) | GPIO 14 (TX) |
 | GND | GND |
 
 ---
