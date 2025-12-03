@@ -74,14 +74,21 @@ void MPU6050_Read_Gyro(I2C_HandleTypeDef *hi2c, int16_t *gx, int16_t *gy, int16_
 #define US_TRIG_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-#define MOUNT_TYPE	1
+#define MOUNT_TYPE	1	// 1 or 2
 
-#define OFFSET_AX	-100
-#define OFFSET_AY	-2300
-#define OFFSET_AZ	-6000
-#define OFFSET_GX	-170
-#define OFFSET_GY	-830
-#define OFFSET_GZ	40
+#define OFFSET_AX_TYPE_1	-100
+#define OFFSET_AY_TYPE_1	-2300
+#define OFFSET_AZ_TYPE_1	-6000
+#define OFFSET_GX_TYPE_1	-170
+#define OFFSET_GY_TYPE_1	-830
+#define OFFSET_GZ_TYPE_1	40
+
+#define OFFSET_AX_TYPE_2	0
+#define OFFSET_AY_TYPE_2	0
+#define OFFSET_AZ_TYPE_2	0
+#define OFFSET_GX_TYPE_2	0
+#define OFFSET_GY_TYPE_2	0
+#define OFFSET_GZ_TYPE_2	0
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

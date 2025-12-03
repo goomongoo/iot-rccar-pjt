@@ -215,12 +215,21 @@ void StartControlTask(void *argument)
 	  Remap_Axis(raw_ax, raw_ay, raw_az, &body_ax, &body_ay, &body_az);
 	  Remap_Axis(raw_gx, raw_gy, raw_gz, &body_gx, &body_gy, &body_gz);
 
-	  body_ax -= OFFSET_AX;
-	  body_ay -= OFFSET_AY;
-	  body_az -= OFFSET_AZ;
-	  body_gx -= OFFSET_GX;
-	  body_gy -= OFFSET_GY;
-	  body_gz -= OFFSET_GZ;
+#if (MOUNT_TYPE == 1)
+	  body_ax -= OFFSET_AX_TYPE_1;
+	  body_ay -= OFFSET_AY_TYPE_1;
+	  body_az -= OFFSET_AZ_TYPE_1;
+	  body_gx -= OFFSET_GX_TYPE_1;
+	  body_gy -= OFFSET_GY_TYPE_1;
+	  body_gz -= OFFSET_GZ_TYPE_1;
+#elif (MOUNT_TYPE == 2)
+	  body_ax -= OFFSET_AX_TYPE_2;
+	  body_ay -= OFFSET_AY_TYPE_2;
+	  body_az -= OFFSET_AZ_TYPE_2;
+	  body_gx -= OFFSET_GX_TYPE_2;
+	  body_gy -= OFFSET_GY_TYPE_2;
+	  body_gz -= OFFSET_GZ_TYPE_2;
+#endif
 
 	  // Ultrasonic
 	  HAL_GPIO_WritePin(US_TRIG_GPIO_Port, US_TRIG_Pin, GPIO_PIN_SET);
