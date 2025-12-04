@@ -312,10 +312,10 @@ void StartTelemetryTask(void *argument)
 			  current_state.throttle, current_state.steer);
 
 	  // Transmit UART DMA
-	  if (HAL_UART_GetState(&huart1) == HAL_UART_STATE_READY)
-	  {
-		  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)tx_buffer, len);
-	  }
+	  //if (HAL_UART_GetState(&huart1) == HAL_UART_STATE_READY)
+	  //{
+		  //HAL_UART_Transmit_DMA(&huart1, (uint8_t *)tx_buffer, len);
+	  //}
 
 	  // Every 50ms
 	  osDelay(50);
