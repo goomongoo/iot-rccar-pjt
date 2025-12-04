@@ -317,6 +317,11 @@ void StartTelemetryTask(void *argument)
 		  //HAL_UART_Transmit_DMA(&huart1, (uint8_t *)tx_buffer, len);
 	  //}
 
+	  if ((HAL_UART_GetState(&huart1) & HAL_UART_STATE_BUSY_TX) != HAL_UART_STATE_BUSY_TX)
+	  {
+		  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)tx_buffer, len);
+	  }
+
 	  // Every 50ms
 	  osDelay(50);
   }

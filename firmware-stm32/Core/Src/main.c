@@ -261,6 +261,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 		{
 			rx_buffer[Size] = '\0';
 		}
+		else
+		{
+			rx_buffer[RX_BUFFER_SIZE - 1] = '\0';
+		}
 
 		// Send signal to CommRxTask
 		if (CommRxTaskHandle != NULL)
@@ -268,6 +272,22 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 			osThreadFlagsSet(CommRxTaskHandle, 0x01);
 		}
 
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUFFER_SIZE);
+	}
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	// 오직 USART1에서 에러가 났을 때만 처리
+	if (huart->Instance == USART1)
+	{
+		// 1. 에러 플래그 클리어 (읽어서 없앰)
+		__HAL_UART_CLEAR_OREFLAG(huart);
+		__HAL_UART_CLEAR_NEFLAG(huart);
+		__HAL_UART_CLEAR_FEFLAG(huart);
+
+		// 2. [핵심] RX(수신) 재시작 (심폐소생술)
+		// 에러 때문에 꺼진 DMA를 다시 켜줍니다.
 		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUFFER_SIZE);
 	}
 }
