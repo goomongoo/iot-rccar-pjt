@@ -83,12 +83,12 @@ void MPU6050_Read_Gyro(I2C_HandleTypeDef *hi2c, int16_t *gx, int16_t *gy, int16_
 #define OFFSET_GY_TYPE_1	-830
 #define OFFSET_GZ_TYPE_1	40
 
-#define OFFSET_AX_TYPE_2	-2600
-#define OFFSET_AY_TYPE_2	-19100
-#define OFFSET_AZ_TYPE_2	-35000
-#define OFFSET_GX_TYPE_2	-270
-#define OFFSET_GY_TYPE_2	1000
-#define OFFSET_GZ_TYPE_2	-500
+#define OFFSET_AX_TYPE_2	-2700
+#define OFFSET_AY_TYPE_2	18000
+#define OFFSET_AZ_TYPE_2	3000
+#define OFFSET_GX_TYPE_2	-300
+#define OFFSET_GY_TYPE_2	400
+#define OFFSET_GZ_TYPE_2	-950
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

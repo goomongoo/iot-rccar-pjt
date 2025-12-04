@@ -105,8 +105,8 @@ void Remap_Axis(int16_t rx, int16_t ry, int16_t rz, int16_t *ox, int16_t *oy, in
 
 #elif (MOUNT_TYPE == 2)
 	*ox = -ry;
-	*oy = -rx;
-	*oz = rz;
+	*oy = -rz;
+	*oz = rx;
 
 #endif
 }
