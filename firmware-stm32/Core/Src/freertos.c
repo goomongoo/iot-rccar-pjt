@@ -104,9 +104,9 @@ void Remap_Axis(int16_t rx, int16_t ry, int16_t rz, int16_t *ox, int16_t *oy, in
 	*oz = rz;
 
 #elif (MOUNT_TYPE == 2)
-	*ox = rx;
-	*oy = rz;
-	*oz = -ry;
+	*ox = -ry;
+	*oy = -rx;
+	*oz = rz;
 
 #endif
 }
@@ -314,7 +314,7 @@ void StartTelemetryTask(void *argument)
 	  // Transmit UART DMA
 	  //if (HAL_UART_GetState(&huart1) == HAL_UART_STATE_READY)
 	  //{
-		  //HAL_UART_Transmit_DMA(&huart1, (uint8_t *)tx_buffer, len);
+	  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)tx_buffer, len);
 	  //}
 
 	  // Every 50ms
