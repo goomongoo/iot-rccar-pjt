@@ -39,6 +39,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MPU6050_ADDR	(0x68 << 1)
+#define RX_BUFFER_SIZE	64
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -54,6 +55,8 @@ uint32_t ic_val2 = 0;
 uint32_t difference = 0;
 uint8_t is_first_captured;
 volatile uint32_t g_distance = 0;
+
+uint8_t rx_buffer[RX_BUFFER_SIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,7 +68,7 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+extern osThreadId_t CommRxTaskHandle;
 /* USER CODE END 0 */
 
 /**
@@ -109,6 +112,9 @@ int main(void)
 
   // 2. Init MPU6050
   MPU6050_Init(&hi2c1);
+
+  // 3. UART Rx Init
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUFFER_SIZE);
 
   /* USER CODE END 2 */
 
@@ -245,6 +251,25 @@ void MPU6050_Read_Gyro(I2C_HandleTypeDef *hi2c, int16_t *gx, int16_t *gy, int16_
 	*gx = (int16_t)(rec_data[0] << 8 | rec_data[1]);
 	*gy = (int16_t)(rec_data[2] << 8 | rec_data[3]);
 	*gz = (int16_t)(rec_data[4] << 8 | rec_data[5]);
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+	if (huart->Instance == USART1)
+	{
+		if (Size < RX_BUFFER_SIZE)
+		{
+			rx_buffer[Size] = '\0';
+		}
+
+		// Send signal to CommRxTask
+		if (CommRxTaskHandle != NULL)
+		{
+			osThreadFlagsSet(CommRxTaskHandle, 0x01);
+		}
+
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, RX_BUFFER_SIZE);
+	}
 }
 /* USER CODE END 4 */
 

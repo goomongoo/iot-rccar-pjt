@@ -26,10 +26,14 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "usart.h"
 #include "i2c.h"
+#include "motorhat.h"
 
 extern volatile uint32_t g_distance;
+extern uint8_t rx_buffer[];
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -204,6 +208,13 @@ void StartControlTask(void *argument)
 	int16_t body_ax, body_ay, body_az;
 	int16_t body_gx, body_gy, body_gz;
 
+	int16_t target_thr = 0;
+	int16_t target_str = 0;
+
+	MotorHat_Init();
+	Motor_SetSteer(0);
+	Motor_SetThrottle(0);
+
   /* Infinite loop */
   for(;;)
   {
@@ -247,9 +258,21 @@ void StartControlTask(void *argument)
 		  g_carState.gy = body_gy;
 		  g_carState.gz = body_gz;
 		  g_carState.distance_cm = g_distance;
+		  target_thr = g_carState.throttle;
+		  target_str = g_carState.steer;
 
 		  osMutexRelease(stateMutexHandle);
 	  }
+
+	  // Failsafe
+	  if (g_distance > 0 && g_distance < 10 && target_thr > 0)
+	  {
+		  target_thr = 0;
+	  }
+
+	  // Run motor
+	  Motor_SetThrottle(target_thr);
+	  Motor_SetSteer(target_str);
 
 	  // Every 20ms
 	  osDelay(20);
@@ -310,10 +333,49 @@ void StartTelemetryTask(void *argument)
 void StartCommRxTask(void *argument)
 {
   /* USER CODE BEGIN StartCommRxTask */
+	char *token;
+	char cmd_copy[64];
+
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1000);
+	  // 1. Wait for data (blocking)
+	  osThreadFlagsWait(0x01, osFlagsWaitAny, osWaitForever);
+
+	  // 2. Copy data
+	  strcpy(cmd_copy, (char *)rx_buffer);
+
+	  // 3. parsing logic
+	  token = strtok(cmd_copy, ",");
+
+	  if (token != NULL)
+	  {
+		  if (!strcmp(token, "$CMD"))
+		  {
+			  // Format: $CMD,THROTTLE,STEER
+			  char *s_thr = strtok(NULL, ",");
+			  char *s_str = strtok(NULL, ",");
+
+			  if (s_thr != NULL && s_str != NULL)
+			  {
+				  int16_t val_thr = atoi(s_thr);
+				  int16_t val_str = atoi(s_str);
+
+				  if (osMutexAcquire(stateMutexHandle, 10) == osOK)
+				  {
+					  g_carState.throttle = val_thr;
+					  g_carState.steer = val_str;
+					  osMutexRelease(stateMutexHandle);
+				  }
+			  }
+		  }
+		  else if (!strcmp(token, "$TUN"))
+		  {
+			  // Format: $TUN,TYPE,VALUE
+			  //TODO
+		  }
+	  }
+	  memset(rx_buffer, 0, 64);
   }
   /* USER CODE END StartCommRxTask */
 }
