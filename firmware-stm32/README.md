@@ -1,4 +1,5 @@
 # STM32 RC Car Firmware
+
 L1 Control Layer Technical Report
 
 본 문서는 “AI 예지 정비(Predictive Maintenance) 및 사람 추종 자율주행 RC Car” 프로젝트에서 L1 제어 계층(STM32 Nucleo-F103RB)이 수행하는 기능, 구조, 통신 규격, FreeRTOS 기반 스케줄링, MotorHat(PCA9685) 제어 방식, 센서 입력 처리(Accel/Gyro/초음파), 안전 제어 로직 등을 상세하게 기술한다. 또한 프로젝트 명세서에서 요구한 기능들이 실제 코드에서 어떻게 구현되었는지를 정리한다.
@@ -11,28 +12,33 @@ L1 Control Layer Technical Report
 
 명세서 기반 전체 아키텍처에서 L1(STM32)은 다음 실시간 제어 기능들을 수행한다.
 
-1. 센서 입력의 고속 수집  
-   - MPU6050 가속도/자이로 수집  
+1. 센서 입력의 고속 수집
+
+   - MPU6050 가속도/자이로 수집
    - 초음파 거리 센서 측정(TIM4 Input Capture)
 
-2. 모터 및 서보 제어  
-   - MotorHat(PCA9685) 기반 PWM 제어  
-   - DC 모터 속도 제어(Throttle)  
+2. 모터 및 서보 제어
+
+   - MotorHat(PCA9685) 기반 PWM 제어
+   - DC 모터 속도 제어(Throttle)
    - 서보 조향 제어(Steering)
 
-3. 실시간 Fail-Safe  
+3. 실시간 Fail-Safe
+
    - 장애물 거리 10cm 이하 시 강제 정지
 
-4. 텔레메트리 데이터 전송  
+4. 텔레메트리 데이터 전송
+
    - `$TEL` 패킷을 약 50 ms 주기로 UART DMA 전송
 
-5. 주행 명령 수신  
+5. 주행 명령 수신
+
    - `$CMD` 패킷 파싱 후 throttle/steer 상태값 반영
 
-6. FreeRTOS 기반 태스크 스케줄링  
-   - ControlTask (20 ms 주기)  
-   - TelemetryTask (50 ms 주기)  
-   - CommRxTask (UART Idle 이벤트 기반)  
+6. FreeRTOS 기반 태스크 스케줄링
+   - ControlTask (20 ms 주기)
+   - TelemetryTask (50 ms 주기)
+   - CommRxTask (UART Idle 이벤트 기반)
    - DefaultTask (Background)
 
 명세서가 요구한 하드 실시간 제어 기능이 모두 반영된 구조이다.
@@ -410,10 +416,10 @@ DC 모터는 다음 채널 구성을 사용한다.
 
 입력 speed는 -100 ~ +100 범위이며, 다음과 같이 처리한다.
 
-1. `abs(speed) * 4095 / 100` 으로 PWM 듀티 계산  
-2. speed > 0: 전진 (IN1 High, IN2 Low)  
-3. speed < 0: 후진 (IN1 Low, IN2 High)  
-4. speed = 0: 정지 (IN1/IN2 모두 OFF, PWM 0)  
+1. `abs(speed) * 4095 / 100` 으로 PWM 듀티 계산
+2. speed > 0: 전진 (IN1 High, IN2 Low)
+3. speed < 0: 후진 (IN1 Low, IN2 High)
+4. speed = 0: 정지 (IN1/IN2 모두 OFF, PWM 0)
 
 ```c
 void Motor_SetThrottle(int16_t speed)
@@ -460,24 +466,24 @@ void Motor_SetThrottle(int16_t speed)
 
 ### 6.2 Task 요약
 
-| Task 이름        | 주기 / 형태      | 우선순위         | 주요 기능 |
-|------------------|------------------|------------------|-----------|
-| DefaultTask      | 1000 ms          | Low              | Background |
-| ControlTask      | 20 ms            | Realtime         | 센서 읽기, 보정, Fail-safe, 모터 제어 |
-| TelemetryTask    | 50 ms            | Normal           | `$TEL` 텔레메트리 송신 |
-| CommRxTask       | 이벤트 기반      | High             | `$CMD` 수신 처리 |
+| Task 이름     | 주기 / 형태 | 우선순위 | 주요 기능                             |
+| ------------- | ----------- | -------- | ------------------------------------- |
+| DefaultTask   | 1000 ms     | Low      | Background                            |
+| ControlTask   | 20 ms       | Realtime | 센서 읽기, 보정, Fail-safe, 모터 제어 |
+| TelemetryTask | 50 ms       | Normal   | `$TEL` 텔레메트리 송신                |
+| CommRxTask    | 이벤트 기반 | High     | `$CMD` 수신 처리                      |
 
 ### 6.3 ControlTask
 
 ControlTask는 주로 다음과 같은 순서로 동작한다.
 
-1. MPU6050 Accel/Gyro 읽기  
-2. 축 리맵 및 Offset 보정  
-3. 초음파 TRIG 펄스 출력  
-4. `g_distance` 값을 포함한 센서 데이터를 `g_carState`에 반영  
-5. 현재 throttle/steer 목표값을 `g_carState`에서 읽어온다.  
-6. Fail-safe 로직 적용(전방 10cm 이내 장애물 시 강제 정지)  
-7. MotorHat을 통해 서보/모터 PWM을 설정  
+1. MPU6050 Accel/Gyro 읽기
+2. 축 리맵 및 Offset 보정
+3. 초음파 TRIG 펄스 출력
+4. `g_distance` 값을 포함한 센서 데이터를 `g_carState`에 반영
+5. 현재 throttle/steer 목표값을 `g_carState`에서 읽어온다.
+6. Fail-safe 로직 적용(전방 10cm 이내 장애물 시 강제 정지)
+7. MotorHat을 통해 서보/모터 PWM을 설정
 8. 20ms 주기로 osDelay(20) 호출
 
 뮤텍스는 다음과 같이 사용한다.
@@ -633,8 +639,8 @@ Downlink 명령은 `$CMD,THROTTLE,STEER` 형식을 따른다. RPi 측에서 이 
 
 조건:
 
-- `g_distance > 0`  
-- `g_distance < 10` (10cm 이내)  
+- `g_distance > 0`
+- `g_distance < 10` (10cm 이내)
 - `target_thr > 0` (전진 중)
 
 위 조건을 모두 만족하면 `target_thr = 0`으로 변경하여 MotorHat에 전달하는 실제 스로틀 값이 0이 되도록 한다. 이 로직은 ControlTask 내부에 포함된다.
@@ -647,17 +653,17 @@ Downlink 명령은 `$CMD,THROTTLE,STEER` 형식을 따른다. RPi 측에서 이 
 
 아래 표는 서비스/프로토콜 명세서상의 요구사항이 실제 코드에서 어떻게 구현되었는지 정리한 것이다.
 
-| 명세서 요구사항                                      | 구현 내용                                              | 파일        |
-|------------------------------------------------------|--------------------------------------------------------|-------------|
-| L1은 실시간 IMU·초음파 센서 수집                     | MPU6050_Read_Accel/Gyro, TIM4 Input Capture 기반 구현 | main.c      |
-| 조향 및 스로틀 제어                                  | Motor_SetSteer, Motor_SetThrottle 함수                | motorhat.c  |
-| `$TEL` 텔레메트리 전송                               | TelemetryTask에서 50ms 간격으로 sprintf + DMA 전송    | freertos.c  |
-| `$CMD` 주행 명령 수신                                | CommRxTask에서 UART DMA 수신 버퍼 파싱                | freertos.c  |
-| 센서 축 리맵 적용                                    | Remap_Axis 함수로 차량 좌표계 기준으로 변환           | freertos.c  |
-| Zero-offset 보정                                     | main.h의 OFFSET_* 매크로 사용                         | main.h      |
-| 전방 거리 기반 Fail-safe                             | ControlTask 내부 거리 조건 체크 후 스로틀 0으로 설정  | freertos.c  |
-| UART DMA 기반 신뢰성 높은 통신 구조                  | ReceiveToIdle_DMA + RxEventCallback + ErrorCallback    | main.c      |
-| 하드 실시간 제어를 위한 태스크 주기(20ms/50ms 등)    | osDelay 기반 고정 주기 Task                            | freertos.c  |
+| 명세서 요구사항                                   | 구현 내용                                             | 파일       |
+| ------------------------------------------------- | ----------------------------------------------------- | ---------- |
+| L1은 실시간 IMU·초음파 센서 수집                  | MPU6050_Read_Accel/Gyro, TIM4 Input Capture 기반 구현 | main.c     |
+| 조향 및 스로틀 제어                               | Motor_SetSteer, Motor_SetThrottle 함수                | motorhat.c |
+| `$TEL` 텔레메트리 전송                            | TelemetryTask에서 50ms 간격으로 sprintf + DMA 전송    | freertos.c |
+| `$CMD` 주행 명령 수신                             | CommRxTask에서 UART DMA 수신 버퍼 파싱                | freertos.c |
+| 센서 축 리맵 적용                                 | Remap_Axis 함수로 차량 좌표계 기준으로 변환           | freertos.c |
+| Zero-offset 보정                                  | main.h의 OFFSET\_\* 매크로 사용                       | main.h     |
+| 전방 거리 기반 Fail-safe                          | ControlTask 내부 거리 조건 체크 후 스로틀 0으로 설정  | freertos.c |
+| UART DMA 기반 신뢰성 높은 통신 구조               | ReceiveToIdle_DMA + RxEventCallback + ErrorCallback   | main.c     |
+| 하드 실시간 제어를 위한 태스크 주기(20ms/50ms 등) | osDelay 기반 고정 주기 Task                           | freertos.c |
 
 ---
 
