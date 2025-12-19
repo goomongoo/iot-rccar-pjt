@@ -127,7 +127,7 @@ void Motor_SetSteer(int16_t angle)
 	// -100 * -1.5 = +150 -> 430 + 150 = 580 (OK)
 	// +100 * -1.5 = -150 -> 430 - 150 = 280 (OK)
 
-	int pwm_val = 430 - (int)(angle * 1.5f);
+	int pwm_val = 430 - (int)(angle * 0.9f);
 
 	setPWM(PIN_SERVO, 0, pwm_val);
 }

@@ -211,6 +211,10 @@ void StartControlTask(void *argument)
 	int16_t target_thr = 0;
 	int16_t target_str = 0;
 
+	static uint8_t brake_tick = 0;
+	static uint8_t is_braking_active = 0;
+	static uint8_t is_sent_brake_msg = 0;
+
 	MotorHat_Init();
 	Motor_SetSteer(0);
 	Motor_SetThrottle(0);
@@ -265,9 +269,38 @@ void StartControlTask(void *argument)
 	  }
 
 	  // Failsafe
-	  if (g_distance > 0 && g_distance < 10 && target_thr > 0)
+	  if (g_distance > 0 && g_distance < 15 && target_thr > 0)
 	  {
-		  target_thr = 0;
+		  is_braking_active = 1;
+		  if (is_sent_brake_msg == 0)
+		  {
+			  const char *msg = "$STS,US_BRAKE\r\n";
+			  if ((HAL_UART_GetState(&huart1) & HAL_UART_STATE_BUSY_TX) != HAL_UART_STATE_BUSY_TX)
+			  {
+				  HAL_UART_Transmit_DMA(&huart1, (uint8_t *)msg, strlen(msg));
+				  is_sent_brake_msg = 1;
+			  }
+		  }
+	  }
+
+	  if (target_thr <= 0)
+	  {
+		  is_braking_active = 0;
+		  brake_tick = 0;
+		  is_sent_brake_msg = 0;
+	  }
+
+	  if (is_braking_active == 1)
+	  {
+		  if (brake_tick < 10)
+		  {
+			  target_thr = -80;
+			  brake_tick++;
+		  }
+		  else
+		  {
+			  target_thr = 0;
+		  }
 	  }
 
 	  // Run motor
