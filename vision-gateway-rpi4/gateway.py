@@ -238,14 +238,22 @@ def on_message(mqtt_client, userdata, msg):
 
 
 # ---------------- Gesture mapping ----------------
+# Update only the specified axis; keep the other axis as-is.
 # Values can be tuned for the specific vehicle.
-GESTURE_MAP: dict[str, tuple[int, int]] = {
-    "Thumb_Up":    (60, 0),
-    "Thumb_Down":  (-60, 0),
-    "Closed_Fist": (0, 0),
-    "Open_Palm":   (0, 0),
-    "Pointing_Up": (0, -100),
-    "Victory":     (0, 100),
+GESTURE_ACTIONS: dict[str, dict[str, int]] = {
+    # 1) Thumb up/down: throttle changes, steer is preserved
+    "Thumb_Up":    {"throttle": 60},
+    "Thumb_Down":  {"throttle": -60},
+
+    # 2) Pointing/Victory: steer changes, throttle is preserved
+    "Pointing_Up": {"steer": -100},
+    "Victory":     {"steer": 100},
+
+    # 3) Fist: steer -> 0, throttle preserved
+    "Closed_Fist": {"steer": 0},
+
+    # 4) Palm: throttle -> 0, steer preserved
+    "Open_Palm":   {"throttle": 0},
 }
 
 
@@ -281,6 +289,10 @@ class GestureWorker(threading.Thread):
         self._last_sent_ts = 0.0
         self._last_gesture = None
 
+        # Current "gesture-commanded" state (so we can preserve the other axis)
+        self._cmd_throttle = 0
+        self._cmd_steer = 0
+
         self._proc_lock = threading.Lock()
         self._is_processing = False
         self._latest_result = None
@@ -290,21 +302,40 @@ class GestureWorker(threading.Thread):
         """Signal the worker thread to stop."""
         self._stop_evt.set()
 
+    def _apply_gesture_action(self, category_name: str) -> tuple[int, int] | None:
+        """
+        Return the updated (throttle, steer) based on the gesture action.
+        Only the specified axis is updated; the other axis is preserved.
+        """
+        action = GESTURE_ACTIONS.get(category_name)
+        if not action:
+            return None
+
+        if "throttle" in action:
+            self._cmd_throttle = int(action["throttle"])
+        if "steer" in action:
+            self._cmd_steer = int(action["steer"])
+
+        return self._cmd_throttle, self._cmd_steer
+
     def _send_by_gesture(self, category_name: str) -> None:
         """Send a UART command based on the recognized gesture."""
         if get_mode() != MODE_GESTURE:
-            return
-        if category_name not in GESTURE_MAP:
             return
 
         now = time.time()
         if (now - self._last_sent_ts) < self.min_interval_sec:
             return
 
+        # Keep the existing "same gesture suppression" to avoid spamming.
         if self._last_gesture == category_name:
             return
 
-        throttle, steer = GESTURE_MAP[category_name]
+        updated = self._apply_gesture_action(category_name)
+        if updated is None:
+            return
+
+        throttle, steer = updated
         uart_send_cmd(throttle, steer, src=f"GEST:{category_name}")
         self._last_sent_ts = now
         self._last_gesture = category_name
@@ -368,7 +399,10 @@ class GestureWorker(threading.Thread):
                     continue
 
                 if get_mode() != MODE_GESTURE:
+                    # When leaving Gesture mode, clear last gesture + reset commanded state.
                     self._last_gesture = None
+                    self._cmd_throttle = 0
+                    self._cmd_steer = 0
                     with self._proc_lock:
                         self._latest_result = None
                         self._latest_result_ts_ms = 0
