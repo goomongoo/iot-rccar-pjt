@@ -1,0 +1,32 @@
+{
+  "T_IN": 20,
+  "T_OUT": 20,
+  "feature_order_X": [
+    "ax",
+    "ay",
+    "az",
+    "gx",
+    "gy",
+    "gz",
+    "throttle",
+    "steer"
+  ],
+  "feature_order_Y": [
+    "ax",
+    "ay",
+    "az",
+    "gx",
+    "gy",
+    "gz"
+  ],
+  "cmd_scale": {
+    "THR_MIN": -100.0,
+    "THR_MAX": 100.0,
+    "STR_MIN": -100.0,
+    "STR_MAX": 100.0
+  },
+  "score": {
+    "type": "window_mse_mean",
+    "per_step_mse_dim_mean": true
+  }
+}
